@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Photo & Design | L. NG Nzojibwami</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+
+    <style>
+        :root { --bg: #050505; --card-bg: #121212; --accent: #25d366; --text: #ffffff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 100px; }
+        header { padding: 60px 20px; text-align: center; background: linear-gradient(to bottom, #1a1a1a, var(--bg)); }
+        h1 { font-size: 1.5rem; letter-spacing: 6px; margin: 0; font-weight: 200; }
+        p.subtitle { opacity: 0.6; font-size: 0.8rem; margin-top: 10px; }
+
+        /* Admin */
+        #admin-link { position: fixed; top: 10px; left: 10px; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; z-index: 100; }
+        #admin-panel { background: #1a1a1a; margin: 20px; padding: 20px; border-radius: 15px; display: none; border: 1px solid #333; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; }
+
+        /* Galerie */
+        .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; padding: 15px; }
+        .card { background: var(--card-bg); border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .card img { width: 100%; height: 400px; object-fit: cover; display: block; }
+        .info { padding: 20px; text-align: center; }
+        
+        /* Boutons */
+        .btn { display: inline-block; padding: 12px 25px; border-radius: 30px; text-decoration: none; font-weight: 600; transition: 0.3s; cursor: pointer; border: none; }
+        .btn-dl { background: #ffffff; color: #000; font-size: 0.9rem; width: 100%; }
+        .btn-wa { background: var(--accent); color: white; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
+        
+        .footer-action { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: center; z-index: 99; }
+    </style>
+</head>
+<body>
+
+    <button id="admin-link" onclick="checkAdmin()">●</button>
+
+    <header>
+        <h1>NZ_DESIGN STUDIO</h1>
+        <p class="subtitle">PHOTOGRAPHIE • DESIGN • BURUNDI</p>
+    </header>
+
+    <section id="admin-panel">
+        <h3>Espace Photographe</h3>
+        <input type="file" id="file" accept="image/*">
+        <input type="text" id="title" placeholder="Nom de la photo ou du projet">
+        <button class="btn btn-wa" style="width:100%" onclick="upload()">Publier maintenant</button>
+        <p id="msg" style="font-size:0.8rem; text-align:center"></p>
+    </section>
+
+    <main class="gallery" id="grid"></main>
+
+    <div class="footer-action">
+        <a href="https://wa.me/25765477584?text=Salut!%20Je%20souhaite%20réserver%20une%20séance%20photo" class="btn btn-wa">
+            RESERVER UN SHOOTING
+        </a>
+    </div>
+
+    <script>
+        // --- CONFIGURATION FIREBASE ---
+        // Remplace par tes infos Firebase Console
+        const firebaseConfig = {
+            apiKey: "TON_API_KEY",
+            authDomain: "TON_PROJET.firebaseapp.com",
+            projectId: "TON_PROJET_ID",
+            storageBucket: "TON_PROJET.appspot.com",
+            messagingSenderId: "TON_ID",
+            appId: "TON_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // Affichage
+        function load() {
+            db.collection("galerie").orderBy("date", "desc").onSnapshot(snap => {
+                const grid = document.getElementById('grid');
+                grid.innerHTML = "";
+                snap.forEach(doc => {
+                    const p = doc.data();
+                    grid.innerHTML += `
+                        <div class="card">
+                            <img src="${p.url}" loading="lazy">
+                            <div class="info">
+                                <h3>${p.nom}</h3>
+                                <a href="${p.url}" target="_blank" class="btn btn-dl">TÉLÉCHARGER HD</a>
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        // Upload
+        async function upload() {
+            const f = document.getElementById('file').files[0];
+            const t = document.getElementById('title').value;
+            if(!f || !t) return alert("Choisis une photo et un titre !");
+            
+            document.getElementById('msg').innerText = "Envoi en cours...";
+            const ref = storage.ref('shots/' + f.name);
+            await ref.put(f);
+            const url = await ref.getDownloadURL();
+            
+            await db.collection("galerie").add({ nom: t, url: url, date: new Date() });
+            document.getElementById('msg').innerText = "Photo publiée !";
+            document.getElementById('title').value = "";
+        }
+
+        function checkAdmin() {
+            const code = prompt("Code d'accès :");
+            if(code === "0000") document.getElementById('admin-panel').style.display = "block";
+        }
+
+        window.onload = load;
+    </script>
+</body>
+</html>
